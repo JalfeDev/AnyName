@@ -79,7 +79,6 @@ public class DownloadImageToFile : MonoBehaviour
                 StartCoroutine(GetDrivePNG(cloudImages.Ciclos[i], folder, $"ciclo examenes {i+1}.png"));
                 StartCoroutine(GetDrivePNG(cloudImages.Horarios[i], folder, $"horario {i+1}.png"));
             }
-            yield return new WaitUntil( () => countLinks >= cloudImages.CountLinks() );
         }
         
         if (isError != string.Empty) UpdateAsyncState(AsyncState.Error, isError);
@@ -94,21 +93,16 @@ public class DownloadImageToFile : MonoBehaviour
     {
         UnityWebRequest www = UnityWebRequest.Get(FromShareToDownload(url));
         yield return www.SendWebRequest();
-        
-        if (isError == string.Empty && countLinks < cloudImages.CountLinks())
+    
+        if (www.result != UnityWebRequest.Result.Success)
         {
-            if (www.result != UnityWebRequest.Result.Success)
-            {
-                isError = www.error;
-                Debug.Log($"PNG WebRequest: {isError}");
-                countLinks = cloudImages.CountLinks();
-            }
-            else
-            {
-                Debug.Log("            Facilito el " + fileName);
-                File.WriteAllBytes(path + "/" + fileName, www.downloadHandler.data);
-                countLinks++;
-            }
+            isError = www.error;
+            Debug.Log($"PNG WebRequest: {isError}");
+        }
+        else
+        {
+            Debug.Log("            Facilito el " + fileName);
+            File.WriteAllBytes(path + "/" + fileName, www.downloadHandler.data);
         }
         www.Dispose();
     }
@@ -116,10 +110,6 @@ public class DownloadImageToFile : MonoBehaviour
     public void SetAsyncStateToDefault()
     {
         UpdateAsyncState(AsyncState.Ask);
-        //Lo pongo aqui porque en la Coroutine principal hace que se descargue todo aunque haya error,
-        //esto es por el WaitUntil que puse en caso de error
-        //Por que hago tanto para el caso de un error si es una app simple, solo mia y que no puede salir mal?
-        countLinks = 0;
     }
 
     private void UpdateAsyncState(AsyncState newState, string message = "")
